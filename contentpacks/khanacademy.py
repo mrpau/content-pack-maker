@@ -570,7 +570,33 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
+    node_data = addin_dubbed_video_mappings(node_data, lang)
+
     return node_data
+
+
+def addin_dubbed_video_mappings(node_data, lang="en"):
+    # Get the dubbed videos from the spreadsheet and substitute them 
+    # for the video attributes of the returned data struct.
+    # TODO(djallado): change the json file name once eduard is done in his module. 
+    path_csv = "build/dubbed_videos.json"
+    with open(path_csv, "r") as f:
+        node_data_csv = ujson.load(f)
+
+    path_ka = "build/from_ka.json"
+    with open(path_ka, "r") as f:
+        node_data_ka = ujson.load(f)
+
+    # TODO(cpauya): Look-up the language code as key in the 
+    # `dubbed_videos.json` and use it's value/object.  Should
+    # use the format based on `nodes.json`.
+
+    for youtube_id in node_data_csv:
+        if youtube_id not in node_data_ka:
+            diff = True
+            node_data_ka.append(youtube_id)
+    print("============", node_data_ka)
+    return node_data_ka
 
 
 def clean_assessment_item(assessment_item) -> dict:
