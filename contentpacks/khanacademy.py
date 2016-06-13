@@ -595,7 +595,7 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
         if youtube_id not in node_data_ka:
             diff = True
             node_data_ka.append(youtube_id)
-    print("============", node_data_ka)
+
     return node_data_ka
 
 
