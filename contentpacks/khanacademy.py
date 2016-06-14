@@ -18,11 +18,12 @@ import polib
 import requests
 import json
 import ujson
+import pkgutil
 
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed
+    is_video_node_dubbed, get_lang_name
 from contentpacks.models import AssessmentItem
 
 NUM_PROCESSES = 5
@@ -259,7 +260,6 @@ def modify_slugs(nodes) -> list:
         node["slug"] = node.get(slug_key.get(node.get("kind")))
     return nodes
 
-
 id_key = {
     "Topic": "slug",
     "Exercise": "name",
@@ -456,7 +456,6 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
         # the only node we do hide, but we use for defining the overall KA channel
         if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
             topic_nodes.append(node)
-
     node_data["topics"] = topic_nodes
 
     # Hack to hardcode the mp4 format flag on Videos.
@@ -570,33 +569,61 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
-    node_data = addin_dubbed_video_mappings(node_data, lang)
+    # node_data = addin_dubbed_video_mappings(node_data, lang)
 
     return node_data
-
 
 def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video attributes of the returned data struct.
     # TODO(djallado): change the json file name once eduard is done in his module. 
-    path_csv = "build/dubbed_videos.json"
-    with open(path_csv, "r") as f:
-        node_data_csv = ujson.load(f)
 
-    path_ka = "build/from_ka.json"
-    with open(path_ka, "r") as f:
-        node_data_ka = ujson.load(f)
+    lang_name = get_lang_name(lang).lower()
 
-    # TODO(cpauya): Look-up the language code as key in the 
-    # `dubbed_videos.json` and use it's value/object.  Should
-    # use the format based on `nodes.json`.
+    # Dubed videos from spreadsheet
+    dubbed_videos = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
+    dubbed_videos_load = ujson.loads(dubbed_videos)
+    spreadsheet_dubbed_videos = dubbed_videos_load[lang_name]
+    # logging.warning("=======> spreadsheet video data %s" % (spreadsheet_dubbed_videos))
 
-    for youtube_id in node_data_csv:
-        if youtube_id not in node_data_ka:
-            diff = True
-            node_data_ka.append(youtube_id)
+    # Dubed videos from Khan
+    current_node_data = {}
+    for obj in node_data:
+        if (obj["kind"] == "Video"):
+            current_node_dic[obj["youtube_id"]] = obj
+    logging.warning("=======> current_node data %s" % (current_node_data))
 
-    return node_data_ka
+
+    en_nodes = pkgutil.get_data('contentpacks', "resources/en-nodes.json")
+    en_node_load = ujson.loads(en_nodes)
+    for node in en_node_load:
+        if (node["kind"] == "Video"):
+            logging.warning("========> en_nodes %s" % (node))
+
+    # try:
+    #     return langlookup[lang]["name"]
+    # except KeyError:
+    #     logging.warning("No name found for {}. Defaulting to DEBUG.".format(lang))
+    #     return "DEBUG"
+
+    # path_csv = "build/dubbed_videos.json"
+    # with open(path_csv, "r") as f:
+    #     node_data_csv = ujson.load(f)
+
+    # path_ka = "build/from_ka.json"
+    # with open(path_ka, "r") as f:
+    #     node_data_ka = ujson.load(f)
+
+    # # TODO(cpauya): Look-up the language code as key in the 
+    # # `dubbed_videos.json` and use it's value/object.  Should
+    # # use the format based on `nodes.json`.
+
+    # for youtube_id in node_data_csv:
+    #     if youtube_id not in node_data_ka:
+    #         diff = True
+    #         node_data_ka.append(youtube_id)
+
+    return en_node_load
 
 
 def clean_assessment_item(assessment_item) -> dict:

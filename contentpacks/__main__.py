@@ -15,7 +15,7 @@ Usage:
 --no-subtitles                 If specified, will omit downloading and including any subtitles.
 --no-assessment-items          If specified, will omit downloading and including any assessment item data.
 --no-assessment-resources      If specified, will omit downloading and including any resources (images, json files) needed to render assessment item exercises.
---no-dubbed-videos              If specified, will omit downloading and including dubbed video mappings
+--no-dubbed-videos             If specified, will omit downloading and including dubbed video mappings
 
 """
 from docopt import docopt
