@@ -573,32 +573,33 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
 
     return node_data
 
+
 def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video attributes of the returned data struct.
-    # TODO(djallado): change the json file name once eduard is done in his module. 
-
     lang_name = get_lang_name(lang).lower()
 
-    # Dubed videos from spreadsheet
-    dubbed_videos = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
-    dubbed_videos_load = ujson.loads(dubbed_videos)
-    spreadsheet_dubbed_videos = dubbed_videos_load[lang_name]
-    # logging.warning("=======> spreadsheet video data %s" % (spreadsheet_dubbed_videos))
+    dubbed_videos_path = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
+    dubbed_videos_load = ujson.loads(dubbed_videos_path)
+    dubbed_videos_list = dubbed_videos_load[lang_name]
 
-    # Dubed videos from Khan
-    current_node_data = {}
+    node_data_list = []
     for obj in node_data:
         if (obj["kind"] == "Video"):
-            current_node_dic[obj["youtube_id"]] = obj
-    logging.warning("=======> current_node data %s" % (current_node_data))
+            node_data_list.append(obj["youtube_id"])
 
-
+    en_nodes_list = []
     en_nodes = pkgutil.get_data('contentpacks', "resources/en-nodes.json")
     en_node_load = ujson.loads(en_nodes)
     for node in en_node_load:
         if (node["kind"] == "Video"):
-            logging.warning("========> en_nodes %s" % (node))
+            if not node["youtube_id"] in node_data_list:
+                if node["youtube_id"] in dubbed_videos_list:
+                    node["youtube_id"] = dubbed_videos_list[node["youtube_id"]]
+                    node["translated_youtube_lang"] = lang
+                    en_nodes_list.append(node)
+
+    node_data += en_nodes_list
 
     # try:
     #     return langlookup[lang]["name"]
@@ -623,7 +624,7 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
     #         diff = True
     #         node_data_ka.append(youtube_id)
 
-    return en_node_load
+    return node_data
 
 
 def clean_assessment_item(assessment_item) -> dict:
@@ -918,7 +919,7 @@ def get_content_length(content):
 
 
 def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
-
+    logging.warning("========> content_data %s content_data" % (content_data))
     if lang != "en":
 
         dubbed_content = []
