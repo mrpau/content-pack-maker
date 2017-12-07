@@ -79,3 +79,13 @@ publish:
 
 dubbed-video-csv: pex
 	./makecontentpacks ./contentpacks/update_dubbed_video_spreadsheet.py
+
+dockerenvbuild:
+	docker image build -t learningequality/ka-lite-content-packs:latest .
+
+dockerenvdist:
+	docker run -v $$PWD/out:/contentpacks/ learningequality/ka-lite-content-packs:latest
+
+dockerenvit:
+	mkdir -p cpacks
+	docker run -it -v $$PWD/cpacks:/contentpacks/ learningequality/ka-lite-content-packs:latest
