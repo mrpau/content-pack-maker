@@ -51,7 +51,7 @@ TOPIC_ATTRIBUTES = [
 
 EXERCISE_ATTRIBUTES = [
     'allAssessmentItems',
-    'curatedRelatedVideos',
+    # 'curatedRelatedVideos',
     'description',
     'displayName',
     'fileName',
@@ -416,7 +416,6 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
         logging.debug("Node count: {}".format(node_count))
 
         children = node.pop("child_data", [])
-
         if children:
             # Use a deepcopy here, in order to create an entirely separate node, not referencing any child objects
             # This avoids any nested data in the node data being shared across nodes.
@@ -424,6 +423,7 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
             children = [copy.deepcopy(node_dict.get(child.get("id"))) for child in children if node_dict.get(child.get("id"))]
 
             counts = reduce(group_by_slug, children, {})
+
             for items in counts.values():
                 # Slug has more than one item!
                 if len(items) > 1:
@@ -575,7 +575,7 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
     node_data = []
     topic_path_list = []
     exercise_ids = []
-    youtube_ids = []
+    video_path_list = []
 
     """
     Get all possible language codes for the language because one language may have multiple language codes or names.  
@@ -614,10 +614,10 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                     exercise_ids.append(node_temp["id"])
                     node_data.append(node_temp)    
             if (node_kind == NodeType.video):
-                if not node_temp["youtube_id"] in youtube_ids:
+                if not node_temp["path"] in video_path_list:
                     youtube_lang = node_temp["translated_youtube_lang"]
                     if youtube_lang == lang:
-                        youtube_ids.append(node_temp["youtube_id"])
+                        video_path_list.append(node_temp["path"])
                         node_data.append(node_temp)
                     elif not youtube_lang == EN_LANG_CODE:
                         """
@@ -626,11 +626,12 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                             language code.
                         Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
                         """
-                        youtube_ids.append(node_temp["youtube_id"])
+                        video_path_list.append(node_temp["path"])
                         node_temp["translated_youtube_lang"] = lang
                         node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
+        
     return node_data
 
 

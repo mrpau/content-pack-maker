@@ -48,7 +48,7 @@ def download_ka_dubbed_video_csv(download_url=None, is_khan_csv=False, cache_fil
             csv_url = "http://www.khanacademy.org/r/translationmapping"
         logging.info("Getting spreadsheet location from (%s)" % csv_url)
         try:
-            download_url = urllib.request.urlopen(csv_url).geturl()
+            download_url = requests.get(csv_url).url
             if "docs.google.com" not in download_url:
                 logging.warn("Redirect location no longer in Google docs (%s)" % download_url)
             else:
