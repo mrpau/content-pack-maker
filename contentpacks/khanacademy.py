@@ -28,7 +28,8 @@ from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
     is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name,\
-    get_lang_ka_name, get_lang_code_list, translate_assessment_item_text, _ensure_dir
+    get_lang_ka_name, get_lang_code_list, translate_assessment_item_text, _ensure_dir,\
+    apply_well_known_math_subtopics
 from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
@@ -125,7 +126,8 @@ POEntry_class.merge = new_merge
 def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str, no_subtitles: bool, no_dubbed_videos: bool) -> LangpackResources:
     node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, ka_domain=ka_domain, no_dubbed_videos=no_dubbed_videos)
 
-    video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
+    # Make this a set so that there will be no duplicates
+    video_ids = list(set([node.get("id") for node in node_data if node.get("kind") == "Video"]))
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
 
     # retrieve KA Lite po files from CrowdIn
@@ -156,13 +158,20 @@ def retrieve_subtitles(videos: list, lang=EN_LANG_CODE, force=False, threads=NUM
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     lang = lang.lower()
-    
+    dump_dir = os.path.join(SUBTITLE_DIR, lang)
+    _ensure_dir(dump_dir)
+    subtitles = list(map(lambda filename: filename.split('.')[0], os.listdir(dump_dir)))
+
     def _download_subtitle_data(youtube_id):
+        subtitle_path = "{path}/{id}.vtt".format(path=dump_dir, id=youtube_id)
+        download_file = "{path}/{id}.{lang}.vtt".format(path=dump_dir, id=youtube_id, lang=lang)
+        logging.info("Checking if '%s.vtt' is in cache..." % youtube_id)
+        if youtube_id in subtitles:
+            logging.info("Found: '%s.vtt'. Skipping download..." % youtube_id)
+            return youtube_id, subtitle_path
         logging.info("trying to download subtitle for %s" % youtube_id)
         # Download the subtitles and return youtube_id, subtitle_path
-        dump_dir = os.path.join(SUBTITLE_DIR, lang)
-        # Create dump_dir if the directory doesn't exist.
-        _ensure_dir(dump_dir)
+        
         subtitle_path = "{path}/{id}.vtt".format(path=dump_dir, id=youtube_id)
         download_file = "{path}/{id}.{lang}.vtt".format(path=dump_dir, id=youtube_id, lang=lang)
         ydl_opts = {
@@ -519,6 +528,9 @@ def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
         if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
             topic_nodes.append(node)
 
+    # Hack to add our custom paths
+    topic_nodes = apply_well_known_math_subtopics(topic_nodes)
+
     node_data["topics"] = topic_nodes
 
     # Hack to hardcode the mp4 format flag on Videos.
@@ -631,7 +643,7 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                         node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
-        
+
     return node_data
 
 
@@ -1019,25 +1031,17 @@ def get_content_length(content):
 
 
 def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
-
+    dubbed_count = sum(item.get("kind") == NodeType.video for item in content_data)
     if lang != EN_LANG_CODE:
-
         dubbed_content = []
-
-        dubbed_count = 0
-
         for item in content_data:
             if item["kind"] == NodeType.video:
-                if is_video_node_dubbed(item, lang):
-                    dubbed_count += 1
+                if not is_video_node_dubbed(item, lang):
+                    dubbed_count -= 1
                 elif item["youtube_id"] not in subtitles:
                     continue
             dubbed_content.append(item)
-
         content_data = dubbed_content
-
-    else:
-        dubbed_count = sum(content_datum.get("kind") == NodeType.video for content_datum in content_data)
 
     for item in content_data:
         item["remote_size"] = item.pop("download_size", 0)
