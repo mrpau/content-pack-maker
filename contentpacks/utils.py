@@ -756,23 +756,92 @@ def clean_node_data_items(node_data):
 
     This function does the following:
         - Remove exercises without assessment items in node_data.
-        - Remove videos with duplicate youtubeIds in node_data.
     """
-    youtube_ids = []
     new_node_data = []
     for node in node_data:
         kind = node.get("kind")
         if kind == NodeType.exercise:
             if node.get("all_assessment_items"):
                 new_node_data.append(node)
-        elif kind == NodeType.video:
-            youtube_id = node.get("youtube_id")
-            if youtube_id not in youtube_ids:
-                youtube_ids.append(youtube_id)
-                new_node_data.append(node)
         else:
             new_node_data.append(node)
     return new_node_data
+
+
+def apply_well_known_math_subtopics(topic_nodes: list) -> list:
+    """
+    Changes the parent of our well-known math subtopics.
+    e.g.
+        khan/math/in-in-grade-11-ncert/ to khan/math/india/in-in-grade-11-ncert/
+    """
+    logging.info("Applying well known math subtopics..")
+    known_math_subtopics = {
+        "india": {
+            "title_pattern": "Class [0-9]+ \(India\)",
+            "title": "Math (India)",
+            "id": "x000india", # Just a custom id
+            "kind": "Topic",
+            "slug": "india",
+            "child_data": [],
+        },
+        "eureka": {
+            "title_pattern": "\(Eureka Math/EngageNY\)",
+            "title": "Math (Eureka)",
+            "id": "x000eureka",
+            "kind": "Topic",
+            "slug": "eureka",
+            "child_data": [],
+        },
+        "canada": {
+            "title_pattern": "[1-9].[sth] grade \(Ontario\)",
+            "title": "Math (Canada)",
+            "id": "x000canada",
+            "slug": "canada",
+            "kind": "Topic",
+            "child_data": [],
+        },
+    }
+
+    remove_from_topics = []
+    for node in topic_nodes:
+        title = node.get("title").strip()
+        node_id = node.get("id")
+        kind = node.get("kind")
+        match = re.search("\d+", title)
+        sort_order = int(match.group(0)) if match else 0
+        child_data = {
+            "id": node_id,
+            "sort_order": sort_order, # Temporarily use this to sort the children properly.
+            "kind": kind,
+        }
+        for k, v in known_math_subtopics.items():
+            if re.search(v["title_pattern"], title):
+                v["child_data"].append(child_data)
+                remove_from_topics.append(node_id)
+
+    for k, v in known_math_subtopics.items():
+        v["child_data"].sort(key=lambda k: k["sort_order"])
+
+    new_math_children = []
+    for node in topic_nodes:
+        if node.get("slug") == "math":
+            children = node.get("child_data")
+            for child in children:
+                # Remove our well known subtopics from the math children
+                if not child.get("id") in remove_from_topics:
+                    new_math_children.append(child)
+            # Add our well-math subtopics
+            for k, v in known_math_subtopics.items():
+                new_math_children.append({"id": v["id"], "kind": v["kind"]})
+            node["child_data"] = new_math_children
+            break
+
+    # Add our new nodes to the list
+    for k, v in known_math_subtopics.items():
+        # Let's remove the title_pattern before adding it to the nodes.
+        v.pop("title_pattern")
+        topic_nodes.append(v)
+    return topic_nodes
 
 
 def _ensure_dir(path):
