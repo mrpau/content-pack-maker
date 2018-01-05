@@ -676,6 +676,7 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
         # and remote_sizes. So, loop over exercises and other content,
         # and skip topics as they will be recursed upwards.
         for node in (n for n in nodes if n.kind != NodeType.topic):
+            logging.info("Saving '{title}'".format(title=node.title))
             _recurse_availability_up_tree(node)
 
     return nodes
@@ -775,8 +776,8 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
         khan/math/in-in-grade-11-ncert/ to khan/math/india/in-in-grade-11-ncert/
     """
     logging.info("Applying well known math subtopics..")
-    known_math_subtopics = {
-        "india": {
+    known_math_subtopics = [
+        {
             "title_pattern": "Class [0-9]+ \(India\)",
             "title": "Math (India)",
             "id": "x000india", # Just a custom id
@@ -784,7 +785,7 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
             "slug": "india",
             "child_data": [],
         },
-        "eureka": {
+        {
             "title_pattern": "\(Eureka Math/EngageNY\)",
             "title": "Math (Eureka)",
             "id": "x000eureka",
@@ -792,7 +793,7 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
             "slug": "eureka",
             "child_data": [],
         },
-        "canada": {
+        {
             "title_pattern": "[1-9].[sth] grade \(Ontario\)",
             "title": "Math (Canada)",
             "id": "x000canada",
@@ -800,7 +801,7 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
             "kind": "Topic",
             "child_data": [],
         },
-    }
+    ]
 
     remove_from_topics = []
     for node in topic_nodes:
@@ -814,13 +815,13 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
             "sort_order": sort_order, # Temporarily use this to sort the children properly.
             "kind": kind,
         }
-        for k, v in known_math_subtopics.items():
-            if re.search(v["title_pattern"], title):
-                v["child_data"].append(child_data)
+        for topic in known_math_subtopics:
+            if re.search(topic["title_pattern"], title):
+                topic["child_data"].append(child_data)
                 remove_from_topics.append(node_id)
 
-    for k, v in known_math_subtopics.items():
-        v["child_data"].sort(key=lambda k: k["sort_order"])
+    for topic in known_math_subtopics:
+        topic["child_data"].sort(key=lambda k: k["sort_order"])
 
     new_math_children = []
     for node in topic_nodes:
@@ -828,19 +829,19 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
             children = node.get("child_data")
             for child in children:
                 # Remove our well known subtopics from the math children
-                if not child.get("id") in remove_from_topics:
+                if child.get("id") not in remove_from_topics:
                     new_math_children.append(child)
             # Add our well-math subtopics
-            for k, v in known_math_subtopics.items():
-                new_math_children.append({"id": v["id"], "kind": v["kind"]})
+            for topic in known_math_subtopics:
+                new_math_children.append({"id": topic["id"], "kind": topic["kind"]})
             node["child_data"] = new_math_children
             break
 
     # Add our new nodes to the list
-    for k, v in known_math_subtopics.items():
+    for topic in known_math_subtopics:
         # Let's remove the title_pattern before adding it to the nodes.
-        v.pop("title_pattern")
-        topic_nodes.append(v)
+        topic.pop("title_pattern")
+        topic_nodes.append(topic)
     return topic_nodes
 
 
