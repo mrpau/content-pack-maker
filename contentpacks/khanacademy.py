@@ -528,7 +528,7 @@ def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
         if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
             topic_nodes.append(node)
 
-    # Hack to add our custom paths
+    # Hack to apply custom paths for our well-known math subtopics
     topic_nodes = apply_well_known_math_subtopics(topic_nodes)
 
     node_data["topics"] = topic_nodes
@@ -1031,7 +1031,7 @@ def get_content_length(content):
 
 
 def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
-    dubbed_count = sum(item.get("kind") == NodeType.video for item in content_data)
+    dubbed_count = len(set([item["id"] for item in content_data if item["kind"] == NodeType.video]))
     if lang != EN_LANG_CODE:
         dubbed_content = []
         for item in content_data:
