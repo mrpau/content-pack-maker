@@ -309,6 +309,10 @@ slug_blacklist += ["mortgage-interest-rates", "factor-polynomials-using-the-gcf"
 # 'Applying the metric system' at http://s3.amazonaws.com/KA-youtube-converted/CDvPPsB3nEM.mp4/CDvPPsB3nEM.mp4...
 # 'Mixed numbers: changing to improper fractions' at http://s3.amazonaws.com/KA-youtube-converted/xkg7370cpjs.mp4/xkg7370cpjs.mp4...
 
+# French language videos that appears in the english content 
+slug_blacklist += ["be-1ere-primaire", "be-2eme-primaire", "be-3eme-primaire", "be-4eme-primaire",
+                   "be-6eme-primaire", "be-5eme-primaire"]
+
 slug_key = {
     "Topic": "slug",
     "Video": "readable_id",

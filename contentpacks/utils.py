@@ -676,7 +676,7 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
         # and remote_sizes. So, loop over exercises and other content,
         # and skip topics as they will be recursed upwards.
         for node in (n for n in nodes if n.kind != NodeType.topic):
-            logging.info("Saving '{title}'".format(title=node.title))
+            logging.info("Marking availability for {kind}: '{title}'".format(kind=node.kind, title=node.title))
             _recurse_availability_up_tree(node)
 
     return nodes
@@ -831,7 +831,7 @@ def apply_well_known_math_subtopics(topic_nodes: list) -> list:
                 # Remove our well known subtopics from the math children
                 if child.get("id") not in remove_from_topics:
                     new_math_children.append(child)
-            # Add our well-math subtopics
+            # Add our well-known math subtopics
             for topic in known_math_subtopics:
                 new_math_children.append({"id": topic["id"], "kind": topic["kind"]})
             node["child_data"] = new_math_children
